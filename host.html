@@ -151,27 +151,6 @@
 </head>
 
 <body class="text-slate-100 min-h-screen w-full p-2 sm:p-4 xl:p-6 flex justify-center items-start lg:items-center">
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCc-veK8CPy3-fH8yFUqxxWvPuHwklK-KA",
-            authDomain: "shooting-goal-chip-counting.firebaseapp.com",
-            projectId: "shooting-goal-chip-counting",
-            storageBucket: "shooting-goal-chip-counting.firebasestorage.app",
-            messagingSenderId: "446421448524",
-            appId: "1:446421448524:web:e3daa6b3de516f306741e9"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const __firebase_config = firebaseConfig; // Expose the config for use in Vue app
-    </script>
-
     <div id="app"
         class="max-w-[1280px] w-full min-h-[100dvh] lg:min-h-0 lg:h-full lg:max-h-[800px] flex flex-col gap-4 pb-10 lg:pb-0">
 
@@ -1074,9 +1053,15 @@
 
                 onMounted(async () => {
                     try {
-                        const appId = typeof __app_id !== 'undefined' ? __app_id : 'shoot-dragon-gate-multiplayer';
-                        const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-                        const fbConfig = JSON.parse(firebaseConfigStr);
+                        const appId = 'shoot-dragon-gate-multiplayer';
+                        const fbConfig = {
+                            apiKey: "AIzaSyCc-veK8CPy3-fH8yFUqxxWvPuHwklK-KA",
+                            authDomain: "shooting-goal-chip-counting.firebaseapp.com",
+                            projectId: "shooting-goal-chip-counting",
+                            storageBucket: "shooting-goal-chip-counting.firebasestorage.app",
+                            messagingSenderId: "446421448524",
+                            appId: "1:446421448524:web:e3daa6b3de516f306741e9"
+                        };
 
                         // Only initialize if we have a real config
                         if (Object.keys(fbConfig).length > 0) {
