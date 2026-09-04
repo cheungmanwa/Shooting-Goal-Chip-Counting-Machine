@@ -105,6 +105,30 @@
 
     <div id="app" class="max-w-[1280px] w-full min-h-[100dvh] lg:min-h-0 lg:h-full lg:max-h-[800px] flex flex-col gap-4 pb-10 lg:pb-0">
         
+        <!-- Role Selection Overlay -->
+        <Transition name="fade">
+            <div v-if="!userRole" class="fixed inset-0 bg-casino-dark/95 backdrop-blur-md z-[200] flex flex-col items-center justify-center p-4">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-casino-gold to-amber-700 flex items-center justify-center shadow-neon-gold border-2 border-yellow-200 mb-6">
+                    <i class="fa-solid fa-futbol text-casino-dark text-4xl animate-bounce"></i>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-black bg-gradient-to-r from-casino-gold via-yellow-200 to-casino-gold bg-clip-text text-transparent drop-shadow-md tracking-wide mb-8">
+                    射龍門神器
+                </h1>
+                <div class="flex flex-col md:flex-row gap-4 w-full max-w-lg">
+                    <button @click="selectRole('host')" class="flex-1 btn-press py-5 bg-gradient-to-r from-emerald-500 to-emerald-700 text-white rounded-2xl font-black text-lg border border-emerald-400/50 shadow-lg flex flex-col items-center gap-2 transition hover:brightness-110">
+                        <i class="fa-solid fa-crown text-3xl text-yellow-300"></i>
+                        建立房間 (房主)
+                        <span class="text-xs font-normal text-emerald-200">全權控制遊戲與派彩</span>
+                    </button>
+                    <button @click="selectRole('viewer')" class="flex-1 btn-press py-5 bg-slate-800 text-slate-200 rounded-2xl font-black text-lg border border-slate-600 shadow-lg flex flex-col items-center gap-2 hover:bg-slate-700 transition">
+                        <i class="fa-solid fa-eye text-3xl text-slate-400"></i>
+                        加入觀戰 (玩家)
+                        <span class="text-xs font-normal text-slate-400">僅能觀看即時戰況同步</span>
+                    </button>
+                </div>
+            </div>
+        </Transition>
+
         <!-- Main Content Grid -->
         <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 lg:min-h-0">
             
@@ -127,6 +151,12 @@
                                 </span>
                                 {{ isOnline ? '雲端同步中' : '單機模式' }}
                             </span>
+                            <span v-if="userRole === 'host'" class="text-[10px] sm:text-xs lg:text-sm font-bold px-2 py-0.5 rounded sm:ml-2 border mt-1 sm:mt-0 bg-yellow-900/50 text-yellow-400 border-yellow-700/50 flex items-center gap-1 w-fit">
+                                <i class="fa-solid fa-crown"></i> 房主
+                            </span>
+                            <span v-if="userRole === 'viewer'" class="text-[10px] sm:text-xs lg:text-sm font-bold px-2 py-0.5 rounded sm:ml-2 border mt-1 sm:mt-0 bg-blue-900/50 text-blue-400 border-blue-700/50 flex items-center gap-1 w-fit">
+                                <i class="fa-solid fa-eye"></i> 觀戰
+                            </span>
                         </h1>
                     </div>
                     
@@ -135,7 +165,7 @@
                         <button @click="showSettlement = true" class="btn-press px-3 py-2 bg-gradient-to-r from-emerald-500 to-emerald-700 font-black text-xs rounded-xl shadow-lg border border-emerald-400/50 flex items-center gap-1.5">
                             <i class="fa-solid fa-sack-dollar text-yellow-300"></i> 結算
                         </button>
-                        <button @click="showSettings = true" class="btn-press p-2 bg-casino-base/80 text-casino-gold rounded-xl border border-emerald-600/50 shadow w-10 h-10 flex items-center justify-center">
+                        <button v-if="userRole === 'host'" @click="showSettings = true" class="btn-press p-2 bg-casino-base/80 text-casino-gold rounded-xl border border-emerald-600/50 shadow w-10 h-10 flex items-center justify-center">
                             <i class="fa-solid fa-gear"></i>
                         </button>
                     </div>
@@ -157,10 +187,10 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 lg:gap-4 mt-4 lg:mt-6 px-2 sm:px-10">
-                        <button @click="collectAnte(false)" class="btn-press btn-hover py-2.5 lg:py-3 bg-gradient-to-r from-emerald-600 to-emerald-800 text-white rounded-xl font-bold text-sm lg:text-base border border-emerald-400/50 flex items-center justify-center gap-1.5 lg:gap-2 shadow-lg transition-all">
+                        <button @click="collectAnte(false)" :disabled="userRole !== 'host'" class="py-2.5 lg:py-3 bg-gradient-to-r from-emerald-600 to-emerald-800 text-white rounded-xl font-bold text-sm lg:text-base border border-emerald-400/50 flex items-center justify-center gap-1.5 lg:gap-2 shadow-lg transition-all disabled:opacity-50 disabled:grayscale disabled:pointer-events-none" :class="{'btn-press btn-hover': userRole === 'host'}">
                             <i class="fa-solid fa-coins text-casino-gold text-base lg:text-lg"></i> 每人落底
                         </button>
-                        <button @click="resetPot" class="btn-press btn-hover py-2.5 lg:py-3 bg-gradient-to-r from-red-800 to-red-950 text-red-100 rounded-xl font-bold text-sm lg:text-base border border-red-500/50 flex items-center justify-center gap-1.5 lg:gap-2 shadow-lg transition-all">
+                        <button @click="resetPot" :disabled="userRole !== 'host'" class="py-2.5 lg:py-3 bg-gradient-to-r from-red-800 to-red-950 text-red-100 rounded-xl font-bold text-sm lg:text-base border border-red-500/50 flex items-center justify-center gap-1.5 lg:gap-2 shadow-lg transition-all disabled:opacity-50 disabled:grayscale disabled:pointer-events-none" :class="{'btn-press btn-hover': userRole === 'host'}">
                             <i class="fa-solid fa-bomb text-red-400 text-base lg:text-lg"></i> 清空爆肚
                         </button>
                     </div>
@@ -172,7 +202,7 @@
                         <label class="text-sm lg:text-base font-black text-emerald-400 flex items-center gap-2">
                             <i class="fa-solid fa-user-astronaut"></i> 選擇當前射手
                         </label>
-                        <button @click="showPlayerManager = true" class="btn-press px-3 lg:px-4 py-1.5 bg-casino-light/30 text-casino-gold border border-casino-gold/30 rounded-lg text-xs lg:text-sm font-bold flex items-center gap-1.5 lg:gap-2 transition">
+                        <button v-if="userRole === 'host'" @click="showPlayerManager = true" class="btn-press px-3 lg:px-4 py-1.5 bg-casino-light/30 text-casino-gold border border-casino-gold/30 rounded-lg text-xs lg:text-sm font-bold flex items-center gap-1.5 lg:gap-2 transition">
                             <i class="fa-solid fa-users-gear"></i> 管理名單
                         </button>
                     </div>
@@ -183,11 +213,14 @@
                             <button 
                                 v-for="p in players" 
                                 :key="p.id"
-                                @click="selectedPlayerId = p.id"
-                                class="btn-press px-4 py-2.5 lg:px-5 lg:py-3 rounded-2xl border-2 flex flex-col items-center min-w-[85px] lg:min-w-[100px] flex-shrink-0 lg:flex-1 transition-all duration-300 relative"
-                                :class="selectedPlayerId === p.id 
-                                    ? 'bg-gradient-to-b from-casino-gold to-amber-600 border-yellow-200 text-black shadow-neon-gold scale-[1.02] z-10' 
-                                    : 'bg-casino-dark border-emerald-700/50 text-slate-300 opacity-80 hover:opacity-100'">
+                                @click="userRole === 'host' ? selectedPlayerId = p.id : null"
+                                class="px-4 py-2.5 lg:px-5 lg:py-3 rounded-2xl border-2 flex flex-col items-center min-w-[85px] lg:min-w-[100px] flex-shrink-0 lg:flex-1 transition-all duration-300 relative"
+                                :class="[
+                                    selectedPlayerId === p.id 
+                                        ? 'bg-gradient-to-b from-casino-gold to-amber-600 border-yellow-200 text-black shadow-neon-gold scale-[1.02] z-10' 
+                                        : 'bg-casino-dark border-emerald-700/50 text-slate-300 opacity-80 hover:opacity-100',
+                                    userRole === 'host' ? 'btn-press cursor-pointer' : 'cursor-default'
+                                ]">
                                 
                                 <div v-if="selectedPlayerId === p.id" class="absolute -top-2 -right-1 lg:-top-3 lg:right-0 text-red-600 animate-bounce">
                                     <i class="fa-solid fa-hand-point-down text-lg lg:text-2xl drop-shadow-md"></i>
@@ -231,14 +264,16 @@
                                     min="0"
                                     :max="currentPot"
                                     @input="sanitizeBetInput"
-                                    class="w-full bg-casino-dark/80 border-2 border-emerald-700/80 rounded-xl py-2 lg:py-3 pl-10 lg:pl-12 pr-4 text-white font-black text-xl lg:text-2xl text-right focus:outline-none focus:border-casino-gold transition-colors shadow-inner">
+                                    :readonly="userRole !== 'host'"
+                                    class="w-full bg-casino-dark/80 border-2 border-emerald-700/80 rounded-xl py-2 lg:py-3 pl-10 lg:pl-12 pr-4 text-white font-black text-xl lg:text-2xl text-right focus:outline-none focus:border-casino-gold transition-colors shadow-inner"
+                                    :class="{'opacity-70 pointer-events-none': userRole !== 'host'}">
                             </div>
 
                             <div class="grid grid-cols-4 gap-1.5 lg:gap-2">
-                                <button @click="setBetPreset(0.25)" class="btn-press py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">1/4 肚</button>
-                                <button @click="setBetPreset(0.50)" class="btn-press py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">半肚</button>
-                                <button @click="setBetPreset(0.75)" class="btn-press py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">3/4 肚</button>
-                                <button @click="setBetPreset(1.0)" class="btn-press py-1.5 lg:py-2 bg-gradient-to-b from-casino-gold to-amber-600 text-black shadow-md text-[10px] lg:text-xs font-black rounded-lg border border-yellow-300">買盡(全)</button>
+                                <button @click="setBetPreset(0.25)" :disabled="userRole !== 'host'" class="py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 transition disabled:opacity-50 disabled:grayscale disabled:pointer-events-none" :class="{'btn-press hover:bg-emerald-800': userRole === 'host'}">1/4 肚</button>
+                                <button @click="setBetPreset(0.50)" :disabled="userRole !== 'host'" class="py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 transition disabled:opacity-50 disabled:grayscale disabled:pointer-events-none" :class="{'btn-press hover:bg-emerald-800': userRole === 'host'}">半肚</button>
+                                <button @click="setBetPreset(0.75)" :disabled="userRole !== 'host'" class="py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 transition disabled:opacity-50 disabled:grayscale disabled:pointer-events-none" :class="{'btn-press hover:bg-emerald-800': userRole === 'host'}">3/4 肚</button>
+                                <button @click="setBetPreset(1.0)" :disabled="userRole !== 'host'" class="py-1.5 lg:py-2 bg-gradient-to-b from-casino-gold to-amber-600 text-black shadow-md text-[10px] lg:text-xs font-black rounded-lg border border-yellow-300 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none" :class="{'btn-press': userRole === 'host'}">買盡(全)</button>
                             </div>
                         </div>
 
@@ -246,24 +281,27 @@
                         <div class="grid grid-cols-2 gap-2 lg:gap-3 lg:flex-1">
                             <button 
                                 @click="processResult('win')" 
-                                :disabled="!isValidBet"
-                                class="btn-press btn-hover py-2.5 lg:py-2 px-2 bg-gradient-to-b from-emerald-400 to-emerald-700 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-white rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(16,185,129,0.4)] border border-emerald-300 flex flex-col items-center justify-center gap-1">
+                                :disabled="!isValidBet || userRole !== 'host'"
+                                class="py-2.5 lg:py-2 px-2 bg-gradient-to-b from-emerald-400 to-emerald-700 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-white rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(16,185,129,0.4)] border border-emerald-300 flex flex-col items-center justify-center gap-1"
+                                :class="{'btn-press btn-hover': userRole === 'host'}">
                                 <i class="fa-solid fa-bullseye text-xl lg:text-2xl text-yellow-300 drop-shadow mb-0.5 lg:mb-1"></i>
                                 <span>射中 <span class="text-[10px] lg:text-sm text-yellow-200 block mt-0.5">+${{ betAmount }}</span></span>
                             </button>
 
                             <button 
                                 @click="processResult('lose')" 
-                                :disabled="!isValidBet"
-                                class="btn-press btn-hover py-2.5 lg:py-2 px-2 bg-gradient-to-b from-slate-500 to-slate-800 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-slate-100 rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(100,116,139,0.4)] border border-slate-400 flex flex-col items-center justify-center gap-1">
+                                :disabled="!isValidBet || userRole !== 'host'"
+                                class="py-2.5 lg:py-2 px-2 bg-gradient-to-b from-slate-500 to-slate-800 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-slate-100 rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(100,116,139,0.4)] border border-slate-400 flex flex-col items-center justify-center gap-1"
+                                :class="{'btn-press btn-hover': userRole === 'host'}">
                                 <i class="fa-solid fa-circle-xmark text-xl lg:text-2xl text-slate-300 drop-shadow mb-0.5 lg:mb-1"></i>
                                 <span>射斜 <span class="text-[10px] lg:text-sm text-slate-300 block mt-0.5">-${{ betAmount }}</span></span>
                             </button>
 
                             <button 
                                 @click="processResult('hit_post')" 
-                                :disabled="!isValidBet"
-                                class="btn-press btn-hover py-2.5 lg:py-2 px-2 bg-gradient-to-b from-red-500 to-red-800 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-white rounded-2xl font-black text-sm lg:text-base shadow-neon-red border border-red-300 flex flex-col items-center justify-center gap-1 relative overflow-hidden">
+                                :disabled="!isValidBet || userRole !== 'host'"
+                                class="py-2.5 lg:py-2 px-2 bg-gradient-to-b from-red-500 to-red-800 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-white rounded-2xl font-black text-sm lg:text-base shadow-neon-red border border-red-300 flex flex-col items-center justify-center gap-1 relative overflow-hidden"
+                                :class="{'btn-press btn-hover': userRole === 'host'}">
                                 <div class="absolute top-0 right-0 bg-yellow-400 text-red-900 text-[9px] lg:text-[10px] font-black px-1.5 lg:px-2 py-0.5 rounded-bl-lg shadow z-10">罰{{ hitPostMultiplier }}倍</div>
                                 <i class="fa-solid fa-explosion text-xl lg:text-2xl text-yellow-300 drop-shadow animate-pulse mb-0.5 lg:mb-1"></i>
                                 <span>撞柱 <span class="text-[10px] lg:text-sm text-yellow-200 block mt-0.5">-${{ betAmount * hitPostMultiplier }}</span></span>
@@ -271,7 +309,9 @@
 
                             <button 
                                 @click="processResult('pass')" 
-                                class="btn-press btn-hover py-2.5 lg:py-2 px-2 bg-gradient-to-b from-blue-500 to-blue-800 text-white rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(59,130,246,0.4)] border border-blue-300 flex flex-col items-center justify-center gap-1">
+                                :disabled="userRole !== 'host'"
+                                class="py-2.5 lg:py-2 px-2 bg-gradient-to-b from-blue-500 to-blue-800 text-white rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(59,130,246,0.4)] border border-blue-300 flex flex-col items-center justify-center gap-1 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
+                                :class="{'btn-press btn-hover': userRole === 'host'}">
                                 <i class="fa-solid fa-forward-step text-xl lg:text-2xl text-blue-200 drop-shadow mb-0.5 lg:mb-1"></i>
                                 <span>Pass <span class="text-[10px] lg:text-sm text-blue-200 block mt-0.5">跳過換人</span></span>
                             </button>
@@ -294,7 +334,7 @@
                         <button @click="isSoundEnabled = !isSoundEnabled" class="flex-1 btn-press bg-casino-base/80 hover:bg-casino-light text-casino-gold rounded-xl border border-emerald-600/50 shadow flex items-center justify-center transition" title="開關音效">
                             <i class="fa-solid text-lg" :class="isSoundEnabled ? 'fa-volume-high' : 'fa-volume-xmark'"></i>
                         </button>
-                        <button @click="showSettings = true" class="flex-1 btn-press bg-casino-base/80 hover:bg-casino-light text-casino-gold rounded-xl border border-emerald-600/50 shadow flex items-center justify-center transition" title="遊戲規則設定">
+                        <button v-if="userRole === 'host'" @click="showSettings = true" class="flex-1 btn-press bg-casino-base/80 hover:bg-casino-light text-casino-gold rounded-xl border border-emerald-600/50 shadow flex items-center justify-center transition" title="遊戲規則設定">
                             <i class="fa-solid fa-gear text-lg"></i>
                         </button>
                     </div>
@@ -307,6 +347,7 @@
                             <i class="fa-solid fa-list-ul"></i> 賽況歷史紀錄
                         </span>
                         <button 
+                            v-if="userRole === 'host'"
                             @click="undoLastAction" 
                             :disabled="logs.length === 0"
                             class="btn-press px-3 lg:px-4 py-1 lg:py-1.5 bg-slate-800/80 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-casino-gold rounded-lg text-xs font-bold border border-slate-600 flex items-center gap-1.5 lg:gap-2 transition">
@@ -509,15 +550,15 @@
                             <!-- Pot Reminder -->
                             <div class="text-xs lg:text-sm text-emerald-300 bg-black/40 p-3 lg:p-4 rounded-2xl flex flex-col gap-2 lg:gap-3 border border-emerald-800/80">
                                 <div class="flex items-center gap-2"><i class="fa-solid fa-circle-info text-emerald-500"></i> 提示：目前彩池尚餘 <strong>${{ currentPot }}</strong> 未分。</div>
-                                <button v-if="currentPot > 0" @click="splitPot" class="btn-press bg-gradient-to-r from-casino-gold to-yellow-500 text-black font-black py-2 lg:py-2.5 px-3 lg:px-4 rounded-xl w-full shadow-neon-gold border border-yellow-200 hover:brightness-110 transition">
+                                <button v-if="currentPot > 0 && userRole === 'host'" @click="splitPot" class="btn-press bg-gradient-to-r from-casino-gold to-yellow-500 text-black font-black py-2 lg:py-2.5 px-3 lg:px-4 rounded-xl w-full shadow-neon-gold border border-yellow-200 hover:brightness-110 transition">
                                     <i class="fa-solid fa-hand-holding-dollar mr-1"></i> 平均退回給所有玩家
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3 lg:gap-4 pt-3 lg:pt-4 mt-1 lg:mt-2 border-t border-emerald-800/50 flex-shrink-0">
-                        <button @click="showResetConfirm = true" class="btn-press py-2.5 lg:py-3 px-3 lg:px-4 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800 rounded-xl font-black text-sm lg:text-base flex items-center justify-center gap-1.5 lg:gap-2 transition">
+                    <div class="grid gap-3 lg:gap-4 pt-3 lg:pt-4 mt-1 lg:mt-2 border-t border-emerald-800/50 flex-shrink-0" :class="userRole === 'host' ? 'grid-cols-2' : 'grid-cols-1'">
+                        <button v-if="userRole === 'host'" @click="showResetConfirm = true" class="btn-press py-2.5 lg:py-3 px-3 lg:px-4 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800 rounded-xl font-black text-sm lg:text-base flex items-center justify-center gap-1.5 lg:gap-2 transition">
                             <i class="fa-solid fa-power-off text-red-500"></i> <span class="hidden sm:inline">帳務清空</span>重新開始
                         </button>
                         <button @click="showSettlement = false" class="btn-press py-2.5 lg:py-3 px-3 lg:px-4 bg-gradient-to-r from-casino-gold to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black rounded-xl font-black text-sm lg:text-base shadow-lg border border-yellow-200 transition text-center">
@@ -567,6 +608,7 @@
         createApp({
             setup() {
                 // Application State
+                const userRole = ref(''); // 'host' (房主) or 'viewer' (觀戰)
                 const anteAmount = ref(10);
                 const hitPostMultiplier = ref(2);
                 const currentPot = ref(0);
@@ -599,7 +641,7 @@
 
                 // Sync function to push local state to Firestore
                 const syncState = () => {
-                    if (!dbDocRef || !isOnline.value) return;
+                    if (!dbDocRef || !isOnline.value || userRole.value !== 'host') return;
                     setDoc(dbDocRef, {
                         players: players.value,
                         currentPot: currentPot.value,
@@ -607,9 +649,25 @@
                         hitPostMultiplier: hitPostMultiplier.value,
                         logs: logs.value,
                         selectedPlayerId: selectedPlayerId.value,
+                        betAmount: betAmount.value, // Viewer sees Host's typed bet
                         logCounter: logCounter,
                         lastUpdated: Date.now()
                     }, { merge: true }).catch(err => console.error("Firebase Sync Write Error:", err));
+                };
+
+                const selectRole = (role) => {
+                    userRole.value = role;
+                    if (role === 'host') {
+                        triggerToast('👑 您已成為房主！可全權控制遊戲。');
+                        // Auto-ante only if it's a completely fresh start
+                        if (currentPot.value === 0 && logs.value.length === 0) {
+                            setTimeout(() => { collectAnte(true); }, 300);
+                        } else {
+                            syncState(); // Ensure viewer gets latest if taking over
+                        }
+                    } else if (role === 'viewer') {
+                        triggerToast('👁️ 您已加入觀戰！將即時同步畫面。');
+                    }
                 };
 
                 // Sound Effects
@@ -657,16 +715,21 @@
                 };
 
                 const sanitizeBetInput = () => {
+                    if (userRole.value !== 'host') return;
                     betAmount.value = Math.floor(Math.abs(betAmount.value)) || 0;
                     if (betAmount.value > currentPot.value) betAmount.value = currentPot.value;
+                    syncState(); // Sync live typing to viewers
                 };
 
                 watch(currentPot, (newVal, oldVal) => {
                     if (newVal !== oldVal) {
                         potJustChanged.value = true;
                         setTimeout(() => { potJustChanged.value = false; }, 300);
-                        if (betAmount.value > newVal) betAmount.value = newVal;
-                        if (betAmount.value === 0 && newVal > 0) betAmount.value = Math.min(anteAmount.value, newVal);
+                        if (userRole.value === 'host') {
+                            if (betAmount.value > newVal) betAmount.value = newVal;
+                            if (betAmount.value === 0 && newVal > 0) betAmount.value = Math.min(anteAmount.value, newVal);
+                            syncState();
+                        }
                     }
                 });
 
@@ -888,12 +951,19 @@
                                         logs.value = data.logs || logs.value;
                                         selectedPlayerId.value = data.selectedPlayerId ?? selectedPlayerId.value;
                                         logCounter = data.logCounter ?? logCounter;
+                                        
+                                        // Viewers see the Host's current bet amount typing
+                                        if (userRole.value === 'viewer' && data.betAmount !== undefined) {
+                                            betAmount.value = data.betAmount;
+                                        }
+                                        
                                         isOnline.value = true;
                                     } else {
-                                        // Doc doesn't exist, create it with local defaults
+                                        // Doc doesn't exist yet (Wait for Host to populate)
                                         isOnline.value = true;
-                                        syncState();
-                                        setTimeout(() => { collectAnte(true); }, 300);
+                                        if (userRole.value === 'host') {
+                                            syncState();
+                                        }
                                     }
                                 }, (error) => {
                                     console.error("Firestore Listen Error:", error);
@@ -903,17 +973,15 @@
                             }
                         } else {
                             console.warn("No Firebase Config found. Running in offline mode.");
-                            setTimeout(() => { collectAnte(true); }, 300);
                         }
                     } catch (err) {
                         console.error("Firebase Init Error:", err);
                         isOnline.value = false;
-                        // Fallback logic
-                        setTimeout(() => { collectAnte(true); }, 300);
                     }
                 });
 
                 return {
+                    userRole, selectRole,
                     anteAmount, hitPostMultiplier, currentPot, selectedPlayerId, betAmount, potJustChanged,
                     players, logs, showSettings, showPlayerManager, showSettlement, showResetConfirm, newPlayerName, toast,
                     isSoundEnabled, floatingTexts, isOnline,
