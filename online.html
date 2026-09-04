@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>射龍門籌碼計數機 - 雲端連線版</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        casino: {
+                            dark: '#022c16',
+                            base: '#064e3b',
+                            light: '#047857',
+                            gold: '#fbbf24',
+                            goldDark: '#b45309',
+                            danger: '#dc2626',
+                            safe: '#10b981'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-gold': '0 0 15px rgba(251, 191, 36, 0.4)',
+                        'neon-red': '0 0 15px rgba(220, 38, 38, 0.4)',
+                        'inner-glow': 'inset 0 2px 10px rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;600;800;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans HK', system-ui, -apple-system, sans-serif;
+            background-color: #022c16;
+            background-image: 
+                radial-gradient(circle at 50% 0%, #064e3b 0%, transparent 60%),
+                url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v20h2v2H20v-1.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2z' fill='%23047857' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Desktop specific styles - prevent scroll on large screens */
+        @media (min-width: 1024px) {
+            body { overflow: hidden; }
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(6, 78, 59, 0.8), rgba(2, 44, 22, 0.9));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .premium-border {
+            position: relative;
+        }
+        .premium-border::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, #fbbf24, #b45309, #fbbf24);
+            z-index: -1;
+            border-radius: inherit;
+            animation: border-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes border-glow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Vue Transitions */
+        .list-enter-active, .list-leave-active { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .list-enter-from { opacity: 0; transform: translateX(30px) scale(0.9); }
+        .list-leave-to { opacity: 0; transform: translateX(-30px) scale(0.9); position: absolute; }
+        .list-move { transition: transform 0.4s ease; }
+        
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; transform: scale(0.95); }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .btn-press:active { transform: scale(0.96) translateY(2px); }
+        
+        @media (hover: hover) {
+            .btn-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen w-full p-2 sm:p-4 xl:p-6 flex justify-center items-start lg:items-center">
+
+    <div id="app" class="max-w-[1280px] w-full min-h-[100dvh] lg:min-h-0 lg:h-full lg:max-h-[800px] flex flex-col gap-4 pb-10 lg:pb-0">
+        
+        <!-- Main Content Grid -->
+        <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 lg:min-h-0">
+            
+            <!-- LEFT COLUMN: Game Board -->
+            <div class="lg:col-span-8 flex flex-col gap-4 lg:gap-5 h-full">
+                
+                <!-- Header -->
+                <header class="flex items-center justify-between bg-black/20 p-3 rounded-2xl border border-emerald-800/50 flex-shrink-0">
+                    <div class="flex items-center gap-2 lg:gap-3 lg:pl-2">
+                        <div class="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-casino-gold to-amber-700 flex items-center justify-center shadow-neon-gold border-2 border-yellow-200">
+                            <i class="fa-solid fa-futbol text-casino-dark text-xl lg:text-2xl animate-bounce"></i>
+                        </div>
+                        <h1 class="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-casino-gold via-yellow-200 to-casino-gold bg-clip-text text-transparent drop-shadow-md tracking-wide flex flex-col sm:flex-row sm:items-center">
+                            射龍門神器 
+                            <span class="text-[10px] sm:text-xs lg:text-sm font-bold px-2 py-0.5 rounded sm:ml-2 border mt-1 sm:mt-0 flex items-center gap-1 w-fit"
+                                  :class="isOnline ? 'text-emerald-400 bg-emerald-900/50 border-emerald-700/50' : 'text-slate-400 bg-slate-900/50 border-slate-700/50'">
+                                <span class="relative flex h-2 w-2">
+                                  <span v-if="isOnline" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span class="relative inline-flex rounded-full h-2 w-2" :class="isOnline ? 'bg-emerald-500' : 'bg-slate-500'"></span>
+                                </span>
+                                {{ isOnline ? '雲端同步中' : '單機模式' }}
+                            </span>
+                        </h1>
+                    </div>
+                    
+                    <!-- Mobile View: Tools quick buttons -->
+                    <div class="flex gap-2 lg:hidden">
+                        <button @click="showSettlement = true" class="btn-press px-3 py-2 bg-gradient-to-r from-emerald-500 to-emerald-700 font-black text-xs rounded-xl shadow-lg border border-emerald-400/50 flex items-center gap-1.5">
+                            <i class="fa-solid fa-sack-dollar text-yellow-300"></i> 結算
+                        </button>
+                        <button @click="showSettings = true" class="btn-press p-2 bg-casino-base/80 text-casino-gold rounded-xl border border-emerald-600/50 shadow w-10 h-10 flex items-center justify-center">
+                            <i class="fa-solid fa-gear"></i>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Main Pot Container -->
+                <div class="glass-card premium-border rounded-3xl p-4 lg:p-6 text-center relative flex flex-col justify-center min-h-[160px] lg:min-h-[200px] flex-shrink-0">
+                    <div class="absolute top-3 left-4 lg:top-4 lg:left-5 text-xs lg:text-sm font-bold text-casino-gold flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-base lg:text-lg"></i> 目前彩池 (肚)
+                    </div>
+                    <div class="absolute top-3 right-4 lg:top-4 lg:right-5 text-[10px] lg:text-xs text-emerald-300 bg-black/40 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg border border-emerald-800">
+                        底注: ${{ anteAmount }} | 撞柱: {{ hitPostMultiplier }}倍
+                    </div>
+                    
+                    <div class="mt-4 flex-1 flex flex-col items-center justify-center">
+                        <div class="text-[4rem] sm:text-[5rem] lg:text-[6rem] leading-none font-black text-white drop-shadow-[0_4px_20px_rgba(251,191,36,0.6)] tracking-tighter transition-all duration-300" :class="{'scale-110 text-casino-gold': potJustChanged}">
+                            <span class="text-3xl lg:text-5xl align-top text-casino-gold mr-1 lg:mr-2">$</span>{{ currentPot }}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 lg:gap-4 mt-4 lg:mt-6 px-2 sm:px-10">
+                        <button @click="collectAnte(false)" class="btn-press btn-hover py-2.5 lg:py-3 bg-gradient-to-r from-emerald-600 to-emerald-800 text-white rounded-xl font-bold text-sm lg:text-base border border-emerald-400/50 flex items-center justify-center gap-1.5 lg:gap-2 shadow-lg transition-all">
+                            <i class="fa-solid fa-coins text-casino-gold text-base lg:text-lg"></i> 每人落底
+                        </button>
+                        <button @click="resetPot" class="btn-press btn-hover py-2.5 lg:py-3 bg-gradient-to-r from-red-800 to-red-950 text-red-100 rounded-xl font-bold text-sm lg:text-base border border-red-500/50 flex items-center justify-center gap-1.5 lg:gap-2 shadow-lg transition-all">
+                            <i class="fa-solid fa-bomb text-red-400 text-base lg:text-lg"></i> 清空爆肚
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Player Turn & Action Panel -->
+                <div class="glass-card rounded-3xl p-4 lg:p-5 flex-1 flex flex-col min-h-0 relative">
+                    <div class="flex justify-between items-center mb-2 lg:mb-3">
+                        <label class="text-sm lg:text-base font-black text-emerald-400 flex items-center gap-2">
+                            <i class="fa-solid fa-user-astronaut"></i> 選擇當前射手
+                        </label>
+                        <button @click="showPlayerManager = true" class="btn-press px-3 lg:px-4 py-1.5 bg-casino-light/30 text-casino-gold border border-casino-gold/30 rounded-lg text-xs lg:text-sm font-bold flex items-center gap-1.5 lg:gap-2 transition">
+                            <i class="fa-solid fa-users-gear"></i> 管理名單
+                        </button>
+                    </div>
+
+                    <!-- Responsive Player List: Scroll-x on Mobile, Wrap on Desktop -->
+                    <div class="flex lg:flex-wrap flex-nowrap gap-2 lg:gap-3 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden hide-scrollbar p-1 pb-2">
+                        <TransitionGroup name="list">
+                            <button 
+                                v-for="p in players" 
+                                :key="p.id"
+                                @click="selectedPlayerId = p.id"
+                                class="btn-press px-4 py-2.5 lg:px-5 lg:py-3 rounded-2xl border-2 flex flex-col items-center min-w-[85px] lg:min-w-[100px] flex-shrink-0 lg:flex-1 transition-all duration-300 relative"
+                                :class="selectedPlayerId === p.id 
+                                    ? 'bg-gradient-to-b from-casino-gold to-amber-600 border-yellow-200 text-black shadow-neon-gold scale-[1.02] z-10' 
+                                    : 'bg-casino-dark border-emerald-700/50 text-slate-300 opacity-80 hover:opacity-100'">
+                                
+                                <div v-if="selectedPlayerId === p.id" class="absolute -top-2 -right-1 lg:-top-3 lg:right-0 text-red-600 animate-bounce">
+                                    <i class="fa-solid fa-hand-point-down text-lg lg:text-2xl drop-shadow-md"></i>
+                                </div>
+
+                                <TransitionGroup name="fade">
+                                    <div v-for="f in floatingTexts.filter(ft => ft.playerId === p.id)" :key="f.id" 
+                                        class="absolute -top-6 lg:-top-8 left-1/2 -translate-x-1/2 font-black text-lg lg:text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] z-20 pointer-events-none whitespace-nowrap"
+                                        :class="f.type === 'win' ? 'text-emerald-400' : 'text-red-500'">
+                                        {{ f.text }}
+                                    </div>
+                                </TransitionGroup>
+
+                                <span class="font-black text-sm lg:text-base truncate w-full text-center">{{ p.name }}</span>
+                                <span class="text-xs lg:text-sm mt-0.5 lg:mt-1 font-bold" :class="selectedPlayerId === p.id ? 'text-black/80' : (p.balance >= 0 ? 'text-emerald-400' : 'text-red-400')">
+                                    {{ p.balance >= 0 ? '+' : '' }}${{ p.balance }}
+                                </span>
+                            </button>
+                        </TransitionGroup>
+                    </div>
+
+                    <!-- Input and Results layout: Stack on mobile, side-by-side on desktop -->
+                    <div class="flex flex-col lg:flex-row gap-3 lg:gap-4 mt-auto pt-3 lg:pt-4 lg:h-48">
+                        
+                        <!-- Betting Input -->
+                        <div class="bg-black/40 p-3 lg:p-4 rounded-2xl border border-emerald-800/60 shadow-inner-glow lg:flex-1 flex flex-col justify-between">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs lg:text-sm font-bold text-emerald-400">下注 (買肚) 金額:</span>
+                                <span class="text-sm lg:text-base font-black text-casino-gold bg-casino-dark px-2 lg:px-3 py-1 rounded-lg border border-casino-gold/20 shadow-neon-gold">
+                                    ${{ betAmount }}
+                                </span>
+                            </div>
+
+                            <div class="relative mb-2 lg:mb-3">
+                                <div class="absolute inset-y-0 left-0 pl-3 lg:pl-4 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-coins text-emerald-600 text-lg lg:text-xl"></i>
+                                </div>
+                                <input 
+                                    type="number" 
+                                    v-model.number="betAmount" 
+                                    min="0"
+                                    :max="currentPot"
+                                    @input="sanitizeBetInput"
+                                    class="w-full bg-casino-dark/80 border-2 border-emerald-700/80 rounded-xl py-2 lg:py-3 pl-10 lg:pl-12 pr-4 text-white font-black text-xl lg:text-2xl text-right focus:outline-none focus:border-casino-gold transition-colors shadow-inner">
+                            </div>
+
+                            <div class="grid grid-cols-4 gap-1.5 lg:gap-2">
+                                <button @click="setBetPreset(0.25)" class="btn-press py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">1/4 肚</button>
+                                <button @click="setBetPreset(0.50)" class="btn-press py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">半肚</button>
+                                <button @click="setBetPreset(0.75)" class="btn-press py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">3/4 肚</button>
+                                <button @click="setBetPreset(1.0)" class="btn-press py-1.5 lg:py-2 bg-gradient-to-b from-casino-gold to-amber-600 text-black shadow-md text-[10px] lg:text-xs font-black rounded-lg border border-yellow-300">買盡(全)</button>
+                            </div>
+                        </div>
+
+                        <!-- Result Buttons -->
+                        <div class="grid grid-cols-2 gap-2 lg:gap-3 lg:flex-1">
+                            <button 
+                                @click="processResult('win')" 
+                                :disabled="!isValidBet"
+                                class="btn-press btn-hover py-2.5 lg:py-2 px-2 bg-gradient-to-b from-emerald-400 to-emerald-700 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-white rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(16,185,129,0.4)] border border-emerald-300 flex flex-col items-center justify-center gap-1">
+                                <i class="fa-solid fa-bullseye text-xl lg:text-2xl text-yellow-300 drop-shadow mb-0.5 lg:mb-1"></i>
+                                <span>射中 <span class="text-[10px] lg:text-sm text-yellow-200 block mt-0.5">+${{ betAmount }}</span></span>
+                            </button>
+
+                            <button 
+                                @click="processResult('lose')" 
+                                :disabled="!isValidBet"
+                                class="btn-press btn-hover py-2.5 lg:py-2 px-2 bg-gradient-to-b from-slate-500 to-slate-800 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-slate-100 rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(100,116,139,0.4)] border border-slate-400 flex flex-col items-center justify-center gap-1">
+                                <i class="fa-solid fa-circle-xmark text-xl lg:text-2xl text-slate-300 drop-shadow mb-0.5 lg:mb-1"></i>
+                                <span>射斜 <span class="text-[10px] lg:text-sm text-slate-300 block mt-0.5">-${{ betAmount }}</span></span>
+                            </button>
+
+                            <button 
+                                @click="processResult('hit_post')" 
+                                :disabled="!isValidBet"
+                                class="btn-press btn-hover py-2.5 lg:py-2 px-2 bg-gradient-to-b from-red-500 to-red-800 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none text-white rounded-2xl font-black text-sm lg:text-base shadow-neon-red border border-red-300 flex flex-col items-center justify-center gap-1 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 bg-yellow-400 text-red-900 text-[9px] lg:text-[10px] font-black px-1.5 lg:px-2 py-0.5 rounded-bl-lg shadow z-10">罰{{ hitPostMultiplier }}倍</div>
+                                <i class="fa-solid fa-explosion text-xl lg:text-2xl text-yellow-300 drop-shadow animate-pulse mb-0.5 lg:mb-1"></i>
+                                <span>撞柱 <span class="text-[10px] lg:text-sm text-yellow-200 block mt-0.5">-${{ betAmount * hitPostMultiplier }}</span></span>
+                            </button>
+
+                            <button 
+                                @click="processResult('pass')" 
+                                class="btn-press btn-hover py-2.5 lg:py-2 px-2 bg-gradient-to-b from-blue-500 to-blue-800 text-white rounded-2xl font-black text-sm lg:text-base shadow-[0_4px_15px_rgba(59,130,246,0.4)] border border-blue-300 flex flex-col items-center justify-center gap-1">
+                                <i class="fa-solid fa-forward-step text-xl lg:text-2xl text-blue-200 drop-shadow mb-0.5 lg:mb-1"></i>
+                                <span>Pass <span class="text-[10px] lg:text-sm text-blue-200 block mt-0.5">跳過換人</span></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Tools & Logs -->
+            <div class="lg:col-span-4 flex flex-col gap-4 lg:gap-5 h-64 lg:h-full">
+                
+                <!-- Quick Tools Header (Desktop Only, hidden on mobile as it's in top header) -->
+                <div class="hidden lg:flex gap-3 h-[72px] flex-shrink-0">
+                    <button @click="showSettlement = true" class="flex-1 btn-press btn-hover px-4 bg-gradient-to-r from-emerald-500 to-emerald-700 font-black text-sm rounded-2xl shadow-lg border border-emerald-400/50 flex flex-col items-center justify-center gap-1 transition">
+                        <i class="fa-solid fa-sack-dollar text-yellow-300 text-xl"></i> 
+                        <span>即時結算</span>
+                    </button>
+                    
+                    <div class="flex flex-col gap-2 w-[72px]">
+                        <button @click="isSoundEnabled = !isSoundEnabled" class="flex-1 btn-press bg-casino-base/80 hover:bg-casino-light text-casino-gold rounded-xl border border-emerald-600/50 shadow flex items-center justify-center transition" title="開關音效">
+                            <i class="fa-solid text-lg" :class="isSoundEnabled ? 'fa-volume-high' : 'fa-volume-xmark'"></i>
+                        </button>
+                        <button @click="showSettings = true" class="flex-1 btn-press bg-casino-base/80 hover:bg-casino-light text-casino-gold rounded-xl border border-emerald-600/50 shadow flex items-center justify-center transition" title="遊戲規則設定">
+                            <i class="fa-solid fa-gear text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Extended Log Panel -->
+                <div class="glass-card rounded-2xl p-3 lg:p-4 flex-1 flex flex-col min-h-0 relative h-full">
+                    <div class="flex justify-between items-center mb-2 lg:mb-3 px-1">
+                        <span class="text-xs lg:text-sm font-bold text-emerald-400 flex items-center gap-2">
+                            <i class="fa-solid fa-list-ul"></i> 賽況歷史紀錄
+                        </span>
+                        <button 
+                            @click="undoLastAction" 
+                            :disabled="logs.length === 0"
+                            class="btn-press px-3 lg:px-4 py-1 lg:py-1.5 bg-slate-800/80 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-casino-gold rounded-lg text-xs font-bold border border-slate-600 flex items-center gap-1.5 lg:gap-2 transition">
+                            <i class="fa-solid fa-rotate-left"></i> 復原
+                        </button>
+                    </div>
+
+                    <div class="overflow-y-auto hide-scrollbar flex-1 pr-1 space-y-1.5 lg:space-y-2 relative bg-black/20 rounded-xl p-1.5 lg:p-2 border border-emerald-900/30">
+                        <div v-if="logs.length === 0" class="text-emerald-700 text-center py-4 text-xs lg:text-sm font-bold absolute inset-0 flex items-center justify-center">
+                            <div class="flex flex-col items-center gap-2">
+                                <i class="fa-solid fa-clipboard-list text-2xl lg:text-3xl opacity-50"></i>
+                                <p>準備好未？開始射龍門啦！</p>
+                            </div>
+                        </div>
+                        <TransitionGroup name="list">
+                            <div 
+                                v-for="log in logs" 
+                                :key="log.id" 
+                                class="bg-black/50 p-2 lg:p-3 rounded-xl border border-emerald-800/60 flex justify-between items-center text-xs lg:text-sm shadow-sm transition-all">
+                                <div class="flex flex-col gap-1 w-full">
+                                    <div class="flex justify-between items-center w-full">
+                                        <span class="font-black text-slate-200 truncate pr-2 flex-1">{{ log.playerName }}</span>
+                                        <span class="font-black text-sm lg:text-base text-right w-16 lg:w-20" :class="log.amount > 0 ? 'text-emerald-400' : (log.amount < 0 ? 'text-red-400' : 'text-slate-400')">
+                                            {{ log.amount > 0 ? '+' : '' }}{{ log.amount }}
+                                        </span>
+                                    </div>
+                                    <div class="flex justify-start">
+                                        <span 
+                                            :class="{
+                                                'bg-emerald-500/20 text-emerald-400 border-emerald-500/30': log.type === 'win',
+                                                'bg-slate-500/20 text-slate-300 border-slate-500/30': log.type === 'lose',
+                                                'bg-red-500/20 text-red-400 border-red-500/30': log.type === 'hit_post',
+                                                'bg-blue-500/20 text-blue-400 border-blue-500/30': log.type === 'pass',
+                                                'bg-casino-gold/20 text-casino-gold border-casino-gold/30': log.type === 'ante' || log.type === 'reset' || log.type === 'split'
+                                            }"
+                                            class="px-2 py-0.5 rounded-md font-bold border text-[10px] lg:text-[11px]">
+                                            {{ log.actionText }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </TransitionGroup>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        
+        <!-- Modal: Player Manager -->
+        <Transition name="fade">
+            <div v-if="showPlayerManager" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-casino-dark border border-emerald-500 w-full max-w-lg rounded-3xl p-5 lg:p-6 shadow-2xl relative flex flex-col max-h-[90vh]">
+                    <button @click="showPlayerManager = false" class="absolute top-4 lg:top-5 right-4 lg:right-5 text-emerald-500 hover:text-white bg-black/50 rounded-full w-8 h-8 flex items-center justify-center transition">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                    
+                    <h2 class="text-xl lg:text-2xl font-black text-casino-gold mb-4 lg:mb-5 flex items-center gap-2 lg:gap-3">
+                        <i class="fa-solid fa-users-gear"></i> 管理玩家名單
+                    </h2>
+
+                    <div class="bg-emerald-900/30 p-3 lg:p-4 rounded-2xl border border-emerald-700/50 mb-4 flex-shrink-0">
+                        <label class="block text-xs lg:text-sm font-bold text-emerald-400 mb-2">邀請新玩家入局：</label>
+                        <div class="flex gap-2 lg:gap-3">
+                            <input type="text" v-model="newPlayerName" placeholder="輸入玩家名字..." @keyup.enter="addPlayer" class="flex-1 bg-black/50 border border-emerald-600 rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base font-bold text-white focus:outline-none focus:border-casino-gold transition">
+                            <button @click="addPlayer" class="btn-press bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base shadow hover:from-emerald-400 hover:to-emerald-500 transition">
+                                <i class="fa-solid fa-plus lg:mr-1"></i> <span class="hidden sm:inline">加入</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 lg:space-y-3 flex-1 overflow-y-auto hide-scrollbar pb-2">
+                        <TransitionGroup name="list">
+                            <div v-for="(p, index) in players" :key="p.id" class="flex items-center gap-2 lg:gap-4 bg-black/40 p-3 lg:p-4 rounded-xl border border-emerald-800 transition-colors hover:border-emerald-600">
+                                <div class="w-6 h-6 lg:w-8 lg:h-8 rounded-full bg-emerald-800 flex items-center justify-center text-xs lg:text-sm font-black text-emerald-300 shrink-0">
+                                    {{ index + 1 }}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <!-- Use event handler for change to trigger sync instead of just v-model -->
+                                    <input type="text" v-model="p.name" @change="syncState" class="w-full bg-transparent font-black text-sm lg:text-base text-slate-100 focus:outline-none focus:border-b border-casino-gold transition-colors truncate">
+                                </div>
+                                <div class="font-mono font-black text-xs lg:text-sm text-right w-16 lg:w-20 shrink-0" :class="p.balance >= 0 ? 'text-emerald-400' : 'text-red-400'">
+                                    ${{ p.balance }}
+                                </div>
+                                <button 
+                                    @click="removePlayer(index, p)" 
+                                    class="btn-press shrink-0 text-red-500 hover:text-white hover:bg-red-600 p-2 lg:p-2.5 bg-red-950/50 rounded-lg transition disabled:opacity-30 disabled:hover:bg-red-950/50 disabled:hover:text-red-500" 
+                                    :disabled="players.length <= 2 || p.balance !== 0">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </TransitionGroup>
+                    </div>
+
+                    <div class="mt-4 lg:mt-5 text-center flex-shrink-0 pt-2 border-t border-emerald-800/50">
+                        <button @click="showPlayerManager = false" class="btn-press w-full py-3 lg:py-4 bg-gradient-to-r from-casino-gold to-amber-600 text-black font-black text-base lg:text-lg rounded-xl shadow-lg hover:from-yellow-300 hover:to-amber-500 transition">
+                            完成設定
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Modal: Game Rules Settings -->
+        <Transition name="fade">
+            <div v-if="showSettings" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-casino-dark border border-emerald-500 w-full max-w-sm rounded-3xl p-5 lg:p-6 shadow-2xl relative">
+                    <button @click="showSettings = false" class="absolute top-4 right-4 text-emerald-500 hover:text-white bg-black/50 rounded-full w-8 h-8 flex items-center justify-center transition">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                    
+                    <h2 class="text-xl font-black text-casino-gold mb-5 lg:mb-6 flex items-center gap-2">
+                        <i class="fa-solid fa-gear"></i> 遊戲規則設定
+                    </h2>
+
+                    <div class="space-y-4 lg:space-y-5">
+                        <div class="bg-black/40 p-4 rounded-2xl border border-emerald-800">
+                            <label class="block text-sm font-bold text-emerald-400 mb-2">每人每次落底注 ($):</label>
+                            <input type="number" v-model.number="anteAmount" @change="syncState" min="1" class="w-full bg-casino-base border border-emerald-600 rounded-xl p-3 text-white font-black text-lg focus:outline-none focus:border-casino-gold transition">
+                            <p class="text-xs text-slate-400 mt-2">* 每次撳「每人落底」時，自動扣除此金額加入彩池。</p>
+                        </div>
+                        
+                        <div class="bg-black/40 p-4 rounded-2xl border border-emerald-800">
+                            <label class="block text-sm font-bold text-emerald-400 mb-2">撞柱慘烈罰金倍數:</label>
+                            <select v-model.number="hitPostMultiplier" @change="syncState" class="w-full bg-casino-base border border-emerald-600 rounded-xl p-3 text-white font-black focus:outline-none focus:border-casino-gold appearance-none transition">
+                                <option :value="2">2 倍 (標準：輸雙倍)</option>
+                                <option :value="3">3 倍 (刺激：輸三倍)</option>
+                                <option :value="1">1 倍 (友誼：同射斜)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 lg:mt-6 text-center">
+                        <button @click="showSettings = false" class="btn-press w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-700 text-white font-black rounded-xl shadow-lg border border-emerald-400/50 hover:from-emerald-400 hover:to-emerald-600 transition">
+                            儲存規則
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Modal: Settlement -->
+        <Transition name="fade">
+            <div v-if="showSettlement" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+                <div class="glass-card premium-border w-full max-w-3xl rounded-3xl p-4 lg:p-6 shadow-2xl flex flex-col max-h-[90vh]">
+                    
+                    <div class="flex justify-between items-center pb-3 lg:pb-4 mb-3 lg:mb-4 border-b border-emerald-800/50 flex-shrink-0">
+                        <h2 class="text-xl lg:text-3xl font-black text-casino-gold drop-shadow flex items-center gap-2 lg:gap-3">
+                            <i class="fa-solid fa-file-invoice-dollar text-yellow-300"></i> 全局結算清單
+                        </h2>
+                        <button @click="showSettlement = false" class="text-slate-400 hover:text-white p-2 transition">
+                            <i class="fa-solid fa-xmark text-xl lg:text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="overflow-y-auto hide-scrollbar flex-1 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 pr-1 lg:pr-2">
+                        <!-- Individual Results -->
+                        <div>
+                            <h3 class="text-xs lg:text-sm font-black text-emerald-400 mb-3 lg:mb-4 bg-emerald-900/50 inline-block px-3 py-1.5 rounded-lg">📊 各人最終戰果</h3>
+                            <div class="flex flex-col gap-2">
+                                <div v-for="p in sortedPlayers" :key="p.id" class="bg-black/50 p-3 lg:p-4 rounded-xl border border-emerald-800/80 flex justify-between items-center shadow-inner hover:bg-black/70 transition">
+                                    <span class="font-bold text-sm lg:text-base truncate max-w-[120px] lg:max-w-[150px] text-slate-200">{{ p.name }}</span>
+                                    <span class="font-black text-base lg:text-lg" :class="p.balance >= 0 ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]' : 'text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]'">
+                                        {{ p.balance >= 0 ? '+' : '' }}${{ p.balance }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Settlement Plan -->
+                        <div class="flex flex-col gap-3 lg:gap-4">
+                            <div class="bg-gradient-to-br from-casino-base to-casino-dark p-4 lg:p-5 rounded-2xl border border-casino-gold/40 shadow-neon-gold flex-1">
+                                <h3 class="text-sm lg:text-base font-black text-casino-gold mb-3 lg:mb-4 flex items-center gap-2">
+                                    <i class="fa-solid fa-handshake-angle"></i> 一鍵找數方案 (最少轉賬)
+                                </h3>
+
+                                <div v-if="settlementTransactions.length === 0" class="bg-black/30 text-emerald-400 text-center py-6 lg:py-8 rounded-xl font-bold text-sm lg:text-base border border-emerald-800 border-dashed">
+                                    🎉 和氣生財，無人爭人錢！
+                                </div>
+
+                                <div v-else class="space-y-2 lg:space-y-3">
+                                    <div 
+                                        v-for="(t, idx) in settlementTransactions" 
+                                        :key="idx" 
+                                        class="bg-black/60 p-3 lg:p-4 rounded-xl border border-emerald-700 flex justify-between items-center shadow-md">
+                                        <div class="flex items-center gap-2 lg:gap-3 flex-1 min-w-0">
+                                            <span class="font-black text-red-400 truncate w-16 lg:w-24 text-right text-xs lg:text-sm">{{ t.from }}</span>
+                                            <div class="flex-1 border-t-2 border-dashed border-slate-500 relative flex justify-center items-center mx-1 lg:mx-2">
+                                                <i class="fa-solid fa-arrow-right absolute text-slate-400 right-0 -translate-y-1/2 top-1/2 bg-black/60 pl-1 text-[10px] lg:text-xs"></i>
+                                            </div>
+                                            <span class="font-black text-emerald-400 truncate w-16 lg:w-24 text-xs lg:text-sm">{{ t.to }}</span>
+                                        </div>
+                                        <div class="ml-2 lg:ml-4 bg-emerald-900/80 text-casino-gold font-black text-sm lg:text-base px-2 lg:px-4 py-1 lg:py-1.5 rounded-lg border border-casino-gold/30 whitespace-nowrap">
+                                            Pay ${{ t.amount }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Pot Reminder -->
+                            <div class="text-xs lg:text-sm text-emerald-300 bg-black/40 p-3 lg:p-4 rounded-2xl flex flex-col gap-2 lg:gap-3 border border-emerald-800/80">
+                                <div class="flex items-center gap-2"><i class="fa-solid fa-circle-info text-emerald-500"></i> 提示：目前彩池尚餘 <strong>${{ currentPot }}</strong> 未分。</div>
+                                <button v-if="currentPot > 0" @click="splitPot" class="btn-press bg-gradient-to-r from-casino-gold to-yellow-500 text-black font-black py-2 lg:py-2.5 px-3 lg:px-4 rounded-xl w-full shadow-neon-gold border border-yellow-200 hover:brightness-110 transition">
+                                    <i class="fa-solid fa-hand-holding-dollar mr-1"></i> 平均退回給所有玩家
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 lg:gap-4 pt-3 lg:pt-4 mt-1 lg:mt-2 border-t border-emerald-800/50 flex-shrink-0">
+                        <button @click="showResetConfirm = true" class="btn-press py-2.5 lg:py-3 px-3 lg:px-4 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800 rounded-xl font-black text-sm lg:text-base flex items-center justify-center gap-1.5 lg:gap-2 transition">
+                            <i class="fa-solid fa-power-off text-red-500"></i> <span class="hidden sm:inline">帳務清空</span>重新開始
+                        </button>
+                        <button @click="showSettlement = false" class="btn-press py-2.5 lg:py-3 px-3 lg:px-4 bg-gradient-to-r from-casino-gold to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black rounded-xl font-black text-sm lg:text-base shadow-lg border border-yellow-200 transition text-center">
+                            返回繼續遊戲
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Modal: Custom Reset Confirmation (Replacing native confirm) -->
+        <Transition name="fade">
+            <div v-if="showResetConfirm" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+                <div class="bg-casino-dark border border-red-500 w-full max-w-sm rounded-3xl p-6 shadow-[0_0_30px_rgba(220,38,38,0.3)] relative text-center">
+                    <div class="w-16 h-16 bg-red-900/50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/50">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                    </div>
+                    <h2 class="text-xl font-black text-white mb-2">確定重新開始？</h2>
+                    <p class="text-sm text-slate-300 mb-6">這將會清空所有玩家餘額、彩池及歷史紀錄，且無法復原。其他連線玩家也會同步被清空。</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button @click="showResetConfirm = false" class="btn-press py-3 bg-slate-800 text-white rounded-xl font-bold border border-slate-600">取消</button>
+                        <button @click="executeResetAllGame" class="btn-press py-3 bg-red-600 text-white rounded-xl font-bold shadow-neon-red">確定清空</button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Toast Notification -->
+        <Transition name="fade">
+            <div 
+                v-if="toast.show" 
+                class="fixed top-10 left-1/2 transform -translate-x-1/2 z-[100] bg-black/95 text-casino-gold border-2 border-casino-gold/80 px-6 lg:px-8 py-3 lg:py-4 rounded-full shadow-neon-gold font-black text-sm lg:text-base flex items-center gap-2 lg:gap-3 whitespace-nowrap">
+                <i class="fa-solid fa-bell text-yellow-400 animate-swing text-base lg:text-lg"></i>
+                <span>{{ toast.message }}</span>
+            </div>
+        </Transition>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const { createApp, ref, computed, watch, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // Application State
+                const anteAmount = ref(10);
+                const hitPostMultiplier = ref(2);
+                const currentPot = ref(0);
+                const selectedPlayerId = ref(1);
+                const betAmount = ref(10);
+                const potJustChanged = ref(false);
+                const players = ref([
+                    { id: 1, name: '玩家 A', balance: 0 },
+                    { id: 2, name: '玩家 B', balance: 0 },
+                    { id: 3, name: '玩家 C', balance: 0 },
+                    { id: 4, name: '玩家 D', balance: 0 }
+                ]);
+                let logCounter = 0;
+                const logs = ref([]);
+
+                // UI State
+                const showSettings = ref(false);
+                const showPlayerManager = ref(false);
+                const showSettlement = ref(false);
+                const showResetConfirm = ref(false);
+                const newPlayerName = ref('');
+                const toast = ref({ show: false, message: '' });
+                const isSoundEnabled = ref(true);
+                const floatingTexts = ref([]);
+                const isOnline = ref(false);
+
+                // Firebase References
+                let dbDocRef = null;
+                let isRemoteUpdate = false;
+
+                // Sync function to push local state to Firestore
+                const syncState = () => {
+                    if (!dbDocRef || !isOnline.value) return;
+                    setDoc(dbDocRef, {
+                        players: players.value,
+                        currentPot: currentPot.value,
+                        anteAmount: anteAmount.value,
+                        hitPostMultiplier: hitPostMultiplier.value,
+                        logs: logs.value,
+                        selectedPlayerId: selectedPlayerId.value,
+                        logCounter: logCounter,
+                        lastUpdated: Date.now()
+                    }, { merge: true }).catch(err => console.error("Firebase Sync Write Error:", err));
+                };
+
+                // Sound Effects
+                const playSound = (type) => {
+                    if (!isSoundEnabled.value) return;
+                    try {
+                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        const now = ctx.currentTime;
+
+                        if (type === 'win') {
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(523.25, now);
+                            osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.1);
+                            gain.gain.setValueAtTime(0.5, now);
+                            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                            osc.start(now);
+                            osc.stop(now + 0.5);
+                        } else if (type === 'hit_post') {
+                            osc.type = 'sawtooth';
+                            osc.frequency.setValueAtTime(200, now);
+                            osc.frequency.linearRampToValueAtTime(50, now + 0.5);
+                            gain.gain.setValueAtTime(0.6, now);
+                            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                            osc.start(now);
+                            osc.stop(now + 0.5);
+                        } else if (type === 'chip') {
+                            osc.type = 'square';
+                            osc.frequency.setValueAtTime(800, now);
+                            gain.gain.setValueAtTime(0.1, now);
+                            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                            osc.start(now);
+                            osc.stop(now + 0.1);
+                        }
+                    } catch (e) {}
+                };
+
+                const triggerToast = (msg) => {
+                    toast.value.message = msg;
+                    toast.value.show = true;
+                    setTimeout(() => { toast.value.show = false; }, 2500);
+                };
+
+                const sanitizeBetInput = () => {
+                    betAmount.value = Math.floor(Math.abs(betAmount.value)) || 0;
+                    if (betAmount.value > currentPot.value) betAmount.value = currentPot.value;
+                };
+
+                watch(currentPot, (newVal, oldVal) => {
+                    if (newVal !== oldVal) {
+                        potJustChanged.value = true;
+                        setTimeout(() => { potJustChanged.value = false; }, 300);
+                        if (betAmount.value > newVal) betAmount.value = newVal;
+                        if (betAmount.value === 0 && newVal > 0) betAmount.value = Math.min(anteAmount.value, newVal);
+                    }
+                });
+
+                const selectedPlayer = computed(() => players.value.find(p => p.id === selectedPlayerId.value) || players.value[0]);
+                const isValidBet = computed(() => betAmount.value > 0 && betAmount.value <= currentPot.value && currentPot.value > 0);
+                const sortedPlayers = computed(() => [...players.value].sort((a, b) => b.balance - a.balance));
+
+                const setBetPreset = (ratio) => {
+                    betAmount.value = Math.floor(currentPot.value * ratio);
+                    playSound('chip');
+                };
+
+                const collectAnte = (isInit = false) => {
+                    if (players.value.length === 0) return;
+                    const totalAnte = anteAmount.value * players.value.length;
+                    
+                    players.value.forEach(p => { p.balance -= anteAmount.value; });
+                    currentPot.value += totalAnte;
+
+                    logs.value.unshift({
+                        id: ++logCounter, type: 'ante', playerName: '全體玩家',
+                        actionText: `落底注 ($${anteAmount.value})`, amount: -anteAmount.value,
+                        potDelta: totalAnte, balancesBefore: players.value.map(p => ({ id: p.id, bal: p.balance + anteAmount.value }))
+                    });
+
+                    if (!isInit) {
+                        playSound('chip');
+                        triggerToast(`所有人已落底，彩池加 $${totalAnte}`);
+                    }
+                    syncState();
+                };
+
+                const splitPot = () => {
+                    if (currentPot.value <= 0 || players.value.length === 0) return;
+                    
+                    const splitAmount = Math.floor(currentPot.value / players.value.length);
+                    const remainder = currentPot.value % players.value.length;
+                    const prevPot = currentPot.value;
+                    const balancesBefore = players.value.map(p => ({ id: p.id, bal: p.balance }));
+
+                    players.value.forEach(p => p.balance += splitAmount);
+                    if (remainder > 0) {
+                        if (selectedPlayer.value) selectedPlayer.value.balance += remainder;
+                        else players.value[0].balance += remainder;
+                    }
+
+                    currentPot.value = 0;
+                    logs.value.unshift({
+                        id: ++logCounter, type: 'split', playerName: '系統',
+                        actionText: `平分彩池退款`, amount: splitAmount, potDelta: -prevPot, balancesBefore: balancesBefore
+                    });
+                    
+                    playSound('win');
+                    triggerToast('彩池餘額已平分退回畀所有玩家！');
+                    syncState();
+                };
+
+                const resetPot = () => {
+                    const prevPot = currentPot.value;
+                    currentPot.value = 0;
+                    logs.value.unshift({
+                        id: ++logCounter, type: 'reset', playerName: '系統',
+                        actionText: '爆肚清空', amount: 0, potDelta: -prevPot, balancesBefore: []
+                    });
+                    playSound('hit_post');
+                    triggerToast('肚已清空！請重新落底！');
+                    syncState();
+                };
+
+                const processResult = (resultType) => {
+                    sanitizeBetInput();
+                    if (!selectedPlayer.value || (resultType !== 'pass' && !isValidBet.value)) return;
+
+                    const player = selectedPlayer.value;
+                    const bAmount = betAmount.value;
+                    let pDelta = 0, potChange = 0, actionLabel = '';
+
+                    if (resultType === 'win') {
+                        pDelta = bAmount; potChange = -bAmount; actionLabel = `射中買 $${bAmount}`;
+                        playSound('win');
+                        if (bAmount >= currentPot.value * 0.4) {
+                            try { confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 }, colors: ['#fbbf24', '#10b981', '#ffffff'] }); } catch(e){}
+                        }
+                    } else if (resultType === 'lose') {
+                        pDelta = -bAmount; potChange = bAmount; actionLabel = `射斜輸 $${bAmount}`; playSound('chip');
+                    } else if (resultType === 'hit_post') {
+                        const penalty = bAmount * hitPostMultiplier.value;
+                        pDelta = -penalty; potChange = penalty; actionLabel = `撞柱罰 ${hitPostMultiplier.value}倍`; playSound('hit_post');
+                    } else if (resultType === 'pass') {
+                        pDelta = 0; potChange = 0; actionLabel = `Pass (唔買)`; playSound('chip');
+                    }
+
+                    logs.value.unshift({
+                        id: ++logCounter, type: resultType, playerId: player.id, playerName: player.name,
+                        actionText: actionLabel, amount: pDelta, potDelta: potChange,
+                        prevPlayerBalance: player.balance, prevPot: currentPot.value
+                    });
+                    if (logs.value.length > 50) logs.value.pop();
+
+                    player.balance += pDelta;
+                    currentPot.value += potChange;
+
+                    if (resultType !== 'pass') {
+                        const fId = Date.now();
+                        floatingTexts.value.push({ id: fId, playerId: player.id, text: pDelta >= 0 ? `+$${pDelta}` : `-$${Math.abs(pDelta)}`, type: resultType });
+                        setTimeout(() => { floatingTexts.value = floatingTexts.value.filter(f => f.id !== fId); }, 1000);
+                    }
+
+                    const currentIndex = players.value.findIndex(p => p.id === player.id);
+                    selectedPlayerId.value = players.value[(currentIndex + 1) % players.value.length].id;
+                    syncState();
+                };
+
+                const undoLastAction = () => {
+                    if (logs.value.length === 0) return;
+                    const lastLog = logs.value.shift();
+
+                    if (lastLog.type === 'ante' || lastLog.type === 'split') {
+                        currentPot.value -= lastLog.potDelta;
+                        lastLog.balancesBefore.forEach(b => {
+                            const p = players.value.find(player => player.id === b.id);
+                            if (p) p.balance = b.bal;
+                        });
+                    } else if (lastLog.type === 'reset') {
+                        currentPot.value -= lastLog.potDelta;
+                    } else {
+                        const p = players.value.find(player => player.id === lastLog.playerId);
+                        if (p) p.balance = lastLog.prevPlayerBalance;
+                        currentPot.value = lastLog.prevPot;
+                        selectedPlayerId.value = lastLog.playerId;
+                    }
+                    playSound('chip');
+                    triggerToast('已復原上一手動作 ⏪');
+                    syncState();
+                };
+
+                const addPlayer = () => {
+                    if (!newPlayerName.value.trim()) return;
+                    players.value.push({ id: Date.now(), name: newPlayerName.value.trim(), balance: 0 });
+                    newPlayerName.value = '';
+                    playSound('chip');
+                    triggerToast('✅ 成功加入新玩家！');
+                    syncState();
+                };
+
+                const removePlayer = (index, player) => {
+                    if (players.value.length <= 2) { triggerToast('⚠️ 遊戲最少需要 2 位玩家！'); return; }
+                    if (player.balance !== 0) { triggerToast('⚠️ 玩家帳目未清（不為$0），不可移除！'); return; }
+
+                    players.value.splice(index, 1);
+                    if (selectedPlayerId.value === player.id) selectedPlayerId.value = players.value[0].id;
+                    triggerToast(`🗑️ 已移除 ${player.name}`);
+                    syncState();
+                };
+
+                const executeResetAllGame = () => {
+                    players.value.forEach(p => p.balance = 0);
+                    currentPot.value = 0;
+                    logs.value = [];
+                    showSettlement.value = false;
+                    showResetConfirm.value = false;
+                    triggerToast('🆕 全新一局已開始！');
+                    setTimeout(() => collectAnte(true), 500);
+                    // collectAnte will call syncState automatically
+                };
+
+                const settlementTransactions = computed(() => {
+                    let debtors = [], creditors = [];
+                    players.value.forEach(p => {
+                        if (p.balance < 0) debtors.push({ name: p.name, amount: -p.balance });
+                        else if (p.balance > 0) creditors.push({ name: p.name, amount: p.balance });
+                    });
+
+                    let transactions = [], i = 0, j = 0;
+                    while (i < debtors.length && j < creditors.length) {
+                        let payVal = Math.min(debtors[i].amount, creditors[j].amount);
+                        if (payVal > 0) transactions.push({ from: debtors[i].name, to: creditors[j].name, amount: payVal });
+                        debtors[i].amount -= payVal;
+                        creditors[j].amount -= payVal;
+                        if (debtors[i].amount === 0) i++;
+                        if (creditors[j].amount === 0) j++;
+                    }
+                    return transactions;
+                });
+
+                onMounted(async () => {
+                    try {
+                        const appId = typeof __app_id !== 'undefined' ? __app_id : 'shoot-dragon-gate-multiplayer';
+                        const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+                        const fbConfig = JSON.parse(firebaseConfigStr);
+
+                        // Only initialize if we have a real config
+                        if (Object.keys(fbConfig).length > 0) {
+                            const app = initializeApp(fbConfig);
+                            const auth = getAuth(app);
+                            const db = getFirestore(app);
+
+                            // Authenticate FIRST (Rule 3)
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+
+                            if (auth.currentUser) {
+                                // Rule 1: Strict Paths
+                                dbDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'default_room');
+                                
+                                // Setup real-time listener (Rule 2: Simple Document Listen)
+                                onSnapshot(dbDocRef, (snapshot) => {
+                                    if (snapshot.exists()) {
+                                        const data = snapshot.data();
+                                        // Update local state smoothly
+                                        isRemoteUpdate = true;
+                                        players.value = data.players || players.value;
+                                        currentPot.value = data.currentPot ?? currentPot.value;
+                                        anteAmount.value = data.anteAmount ?? anteAmount.value;
+                                        hitPostMultiplier.value = data.hitPostMultiplier ?? hitPostMultiplier.value;
+                                        logs.value = data.logs || logs.value;
+                                        selectedPlayerId.value = data.selectedPlayerId ?? selectedPlayerId.value;
+                                        logCounter = data.logCounter ?? logCounter;
+                                        isOnline.value = true;
+                                    } else {
+                                        // Doc doesn't exist, create it with local defaults
+                                        isOnline.value = true;
+                                        syncState();
+                                        setTimeout(() => { collectAnte(true); }, 300);
+                                    }
+                                }, (error) => {
+                                    console.error("Firestore Listen Error:", error);
+                                    isOnline.value = false;
+                                    triggerToast("連線發生錯誤，目前處於單機模式");
+                                });
+                            }
+                        } else {
+                            console.warn("No Firebase Config found. Running in offline mode.");
+                            setTimeout(() => { collectAnte(true); }, 300);
+                        }
+                    } catch (err) {
+                        console.error("Firebase Init Error:", err);
+                        isOnline.value = false;
+                        // Fallback logic
+                        setTimeout(() => { collectAnte(true); }, 300);
+                    }
+                });
+
+                return {
+                    anteAmount, hitPostMultiplier, currentPot, selectedPlayerId, betAmount, potJustChanged,
+                    players, logs, showSettings, showPlayerManager, showSettlement, showResetConfirm, newPlayerName, toast,
+                    isSoundEnabled, floatingTexts, isOnline,
+                    selectedPlayer, isValidBet, sortedPlayers, settlementTransactions,
+                    setBetPreset, collectAnte, splitPot, resetPot, processResult, undoLastAction, addPlayer, removePlayer, 
+                    executeResetAllGame, sanitizeBetInput, syncState
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
