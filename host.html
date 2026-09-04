@@ -174,12 +174,6 @@
                         建立房間 (房主)
                         <span class="text-xs font-normal text-emerald-200">全權控制遊戲與派彩</span>
                     </button>
-                    <button @click="selectRole('viewer')"
-                        class="flex-1 btn-press py-5 bg-slate-800 text-slate-200 rounded-2xl font-black text-lg border border-slate-600 shadow-lg flex flex-col items-center gap-2 hover:bg-slate-700 transition">
-                        <i class="fa-solid fa-eye text-3xl text-slate-400"></i>
-                        加入觀戰 (玩家)
-                        <span class="text-xs font-normal text-slate-400">僅能觀看即時戰況同步</span>
-                    </button>
                 </div>
             </div>
         </Transition>
@@ -736,9 +730,9 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
         const { createApp, ref, computed, watch, onMounted } = Vue;
 
@@ -1055,8 +1049,6 @@
                 onMounted(async () => {
                     try {
                         const appId = 'shoot-dragon-gate-multiplayer';
-
-                        // 在這裡貼上你的真實 Firebase 設定（已預先為你填入當前專案資訊）
                         const fbConfig = {
                             apiKey: "AIzaSyCc-veK8CPy3-fH8yFUqxxWvPuHwklK-KA",
                             authDomain: "shooting-goal-chip-counting.firebaseapp.com",
@@ -1065,8 +1057,6 @@
                             messagingSenderId: "446421448524",
                             appId: "1:446421448524:web:e3daa6b3de516f306741e9"
                         };
-
-
 
                         // Only initialize if we have a real config
                         if (Object.keys(fbConfig).length > 0) {
