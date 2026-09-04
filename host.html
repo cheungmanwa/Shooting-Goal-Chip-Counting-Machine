@@ -874,11 +874,21 @@
                 const isValidBet = computed(() => betAmount.value > 0 && betAmount.value <= currentPot.value && currentPot.value > 0);
                 const sortedPlayers = computed(() => [...players.value].sort((a, b) => b.balance - a.balance));
 
-                const setBetPreset = (ratio) => {
-                    betAmount.value = Math.floor(currentPot.value * ratio);
-                    playSound('chip');
-                    if (userRole.value === 'host') syncState();
-                };
+                const setBetPreset = (val) => {
+    if (val === 'all') {
+        betAmount.value = currentPot.value;
+    } else {
+        // 設定固定金額，但不超過目前彩池上限
+        betAmount.value = val;
+    }
+    playSound('chip');
+    
+    // 如果是房主並已連線 Firebase，需要即時同步下注金額給其他玩家觀戰
+    if (typeof isHost !== 'undefined' && isHost.value && typeof syncState === 'function') {
+        syncState();
+    }
+};
+
 
                 const collectAnte = (isInit = false) => {
                     if (players.value.length === 0) return;
@@ -1136,20 +1146,7 @@
             }
         }).mount('#app');
         
-        const setBetPreset = (val) => {
-    if (val === 'all') {
-        betAmount.value = currentPot.value;
-    } else {
-        // 設定固定金額，但不超過目前彩池上限
-        betAmount.value = val;
-    }
-    playSound('chip');
-    
-    // 如果是房主並已連線 Firebase，需要即時同步下注金額給其他玩家觀戰
-    if (typeof isHost !== 'undefined' && isHost.value && typeof syncState === 'function') {
-        syncState();
-    }
-};
+        
 
     </script>
 </body>
