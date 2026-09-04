@@ -1141,7 +1141,7 @@
         betAmount.value = currentPot.value;
     } else {
         // 設定固定金額，但不超過目前彩池上限
-        betAmount.value = Math.min(val, currentPot.value);
+        betAmount.value = val;
     }
     playSound('chip');
     
