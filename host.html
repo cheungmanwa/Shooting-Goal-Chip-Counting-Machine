@@ -344,20 +344,14 @@
                                     :class="{'opacity-70 pointer-events-none': userRole !== 'host'}">
                             </div>
 
-                            <div class="grid grid-cols-4 gap-1.5 lg:gap-2">
-                                <button @click="setBetPreset(0.25)" :disabled="userRole !== 'host'"
-                                    class="py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 transition disabled:opacity-50 disabled:grayscale disabled:pointer-events-none"
-                                    :class="{'btn-press hover:bg-emerald-800': userRole === 'host'}">1/4 肚</button>
-                                <button @click="setBetPreset(0.50)" :disabled="userRole !== 'host'"
-                                    class="py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 transition disabled:opacity-50 disabled:grayscale disabled:pointer-events-none"
-                                    :class="{'btn-press hover:bg-emerald-800': userRole === 'host'}">半肚</button>
-                                <button @click="setBetPreset(0.75)" :disabled="userRole !== 'host'"
-                                    class="py-1.5 lg:py-2 bg-emerald-900/80 text-emerald-200 text-[10px] lg:text-xs font-bold rounded-lg border border-emerald-700 transition disabled:opacity-50 disabled:grayscale disabled:pointer-events-none"
-                                    :class="{'btn-press hover:bg-emerald-800': userRole === 'host'}">3/4 肚</button>
-                                <button @click="setBetPreset(1.0)" :disabled="userRole !== 'host'"
-                                    class="py-1.5 lg:py-2 bg-gradient-to-b from-casino-gold to-amber-600 text-black shadow-md text-[10px] lg:text-xs font-black rounded-lg border border-yellow-300 disabled:opacity-50 disabled:grayscale disabled:pointer-events-none"
-                                    :class="{'btn-press': userRole === 'host'}">買盡(全)</button>
-                            </div>
+                            <!-- Quick Bet Presets (已改為 $2, $10, $100, 買盡) -->
+<div class="grid grid-cols-4 gap-2">
+    <button @click="setBetPreset(2)" class="btn-press py-2 bg-emerald-900/80 text-emerald-200 text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">$2</button>
+    <button @click="setBetPreset(10)" class="btn-press py-2 bg-emerald-900/80 text-emerald-200 text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">$10</button>
+    <button @click="setBetPreset(100)" class="btn-press py-2 bg-emerald-900/80 text-emerald-200 text-xs font-bold rounded-lg border border-emerald-700 hover:bg-emerald-800 transition">$100</button>
+    <button @click="setBetPreset('all')" class="btn-press py-2 bg-gradient-to-b from-casino-gold to-amber-600 text-black shadow-md text-xs font-black rounded-lg border border-yellow-300">買盡 (全)</button>
+</div>
+
                         </div>
 
                         <!-- Result Buttons -->
@@ -775,6 +769,23 @@
                 // Firebase References
                 let dbDocRef = null;
                 let isRemoteUpdate = false;
+
+
+const setBetPreset = (val) => {
+    if (val === 'all') {
+        betAmount.value = currentPot.value;
+    } else {
+        // 設定固定金額，但不超過目前彩池上限
+        betAmount.value = Math.min(val, currentPot.value);
+    }
+    playSound('chip');
+    
+    // 如果是房主並已連線 Firebase，需要即時同步下注金額給其他玩家觀戰
+    if (typeof isHost !== 'undefined' && isHost.value && typeof syncState === 'function') {
+        syncState();
+    }
+};
+
 
                 // Sync function to push local state to Firestore
                 const syncState = () => {
