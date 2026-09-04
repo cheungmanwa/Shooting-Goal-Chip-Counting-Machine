@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>射龍門籌碼計數機 - 雲端連線版</title>
-    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="shortcut icon" href="https://cheungmanwa.github.io/Shooting-Goal-Chip-Counting-Machine/favicon.ico" />
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 -->
@@ -156,7 +157,7 @@
         class="max-w-[1280px] w-full min-h-[100dvh] lg:min-h-0 lg:h-full lg:max-h-[800px] flex flex-col gap-4 pb-10 lg:pb-0">
 
         <!-- Role Selection Overlay -->
-        <Transition name="fade">
+        <transition name="fade">
             <div v-if="!userRole"
                 class="fixed inset-0 bg-casino-dark/95 backdrop-blur-md z-[200] flex flex-col items-center justify-center p-4">
                 <div
@@ -176,7 +177,7 @@
                     </button>
                 </div>
             </div>
-        </Transition>
+        </transition>
 
         <!-- Main Content Grid -->
         <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 lg:min-h-0">
@@ -279,7 +280,7 @@
                     <!-- Responsive Player List: Scroll-x on Mobile, Wrap on Desktop -->
                     <div
                         class="flex lg:flex-wrap flex-nowrap gap-2 lg:gap-3 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden hide-scrollbar p-1 pb-2">
-                        <TransitionGroup name="list">
+                        <transition-group name="list">
                             <button v-for="p in players" :key="p.id"
                                 @click="userRole === 'host' ? selectedPlayerId = p.id : null"
                                 class="px-4 py-2.5 lg:px-5 lg:py-3 rounded-2xl border-2 flex flex-col items-center min-w-[85px] lg:min-w-[100px] flex-shrink-0 lg:flex-1 transition-all duration-300 relative"
@@ -295,13 +296,13 @@
                                     <i class="fa-solid fa-hand-point-down text-lg lg:text-2xl drop-shadow-md"></i>
                                 </div>
 
-                                <TransitionGroup name="fade">
+                                <transition-group name="fade">
                                     <div v-for="f in floatingTexts.filter(ft => ft.playerId === p.id)" :key="f.id"
                                         class="absolute -top-6 lg:-top-8 left-1/2 -translate-x-1/2 font-black text-lg lg:text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] z-20 pointer-events-none whitespace-nowrap"
                                         :class="f.type === 'win' ? 'text-emerald-400' : 'text-red-500'">
                                         {{ f.text }}
                                     </div>
-                                </TransitionGroup>
+                                </transition-group>
 
                                 <span class="font-black text-sm lg:text-base truncate w-full text-center">{{ p.name
                                     }}</span>
@@ -310,7 +311,7 @@
                                     {{ p.balance >= 0 ? '+' : '' }}${{ p.balance }}
                                 </span>
                             </button>
-                        </TransitionGroup>
+                        </transition-group>
                     </div>
 
                     <!-- Input and Results layout: Stack on mobile, side-by-side on desktop -->
@@ -333,7 +334,7 @@
                                     <i class="fa-solid fa-coins text-emerald-600 text-lg lg:text-xl"></i>
                                 </div>
                                 <input type="number" v-model.number="betAmount" min="0" :max="currentPot"
-                                    @input="sanitizeBetInput" :readonly="userRole !== 'host'"
+                                    @input="onBetInput" :readonly="userRole !== 'host'"
                                     class="w-full bg-casino-dark/80 border-2 border-emerald-700/80 rounded-xl py-2 lg:py-3 pl-10 lg:pl-12 pr-4 text-white font-black text-xl lg:text-2xl text-right focus:outline-none focus:border-casino-gold transition-colors shadow-inner"
                                     :class="{'opacity-70 pointer-events-none': userRole !== 'host'}">
                             </div>
@@ -446,7 +447,7 @@
                                 <p>準備好未？開始射龍門啦！</p>
                             </div>
                         </div>
-                        <TransitionGroup name="list">
+                        <transition-group name="list">
                             <div v-for="log in logs" :key="log.id"
                                 class="bg-black/50 p-2 lg:p-3 rounded-xl border border-emerald-800/60 flex justify-between items-center text-xs lg:text-sm shadow-sm transition-all">
                                 <div class="flex flex-col gap-1 w-full">
@@ -472,7 +473,7 @@
                                     </div>
                                 </div>
                             </div>
-                        </TransitionGroup>
+                        </transition-group>
                     </div>
                 </div>
 
@@ -481,7 +482,7 @@
 
 
         <!-- Modal: Player Manager -->
-        <Transition name="fade">
+        <transition name="fade">
             <div v-if="showPlayerManager"
                 class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div
@@ -510,7 +511,7 @@
                     </div>
 
                     <div class="space-y-2 lg:space-y-3 flex-1 overflow-y-auto hide-scrollbar pb-2">
-                        <TransitionGroup name="list">
+                        <transition-group name="list">
                             <div v-for="(p, index) in players" :key="p.id"
                                 class="flex items-center gap-2 lg:gap-4 bg-black/40 p-3 lg:p-4 rounded-xl border border-emerald-800 transition-colors hover:border-emerald-600">
                                 <div
@@ -532,7 +533,7 @@
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
-                        </TransitionGroup>
+                        </transition-group>
                     </div>
 
                     <div class="mt-4 lg:mt-5 text-center flex-shrink-0 pt-2 border-t border-emerald-800/50">
@@ -543,10 +544,10 @@
                     </div>
                 </div>
             </div>
-        </Transition>
+        </transition>
 
         <!-- Modal: Game Rules Settings -->
-        <Transition name="fade">
+        <transition name="fade">
             <div v-if="showSettings"
                 class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div
@@ -587,10 +588,10 @@
                     </div>
                 </div>
             </div>
-        </Transition>
+        </transition>
 
         <!-- Modal: Settlement -->
-        <Transition name="fade">
+        <transition name="fade">
             <div v-if="showSettlement"
                 class="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
                 <div
@@ -694,10 +695,10 @@
                     </div>
                 </div>
             </div>
-        </Transition>
+        </transition>
 
         <!-- Modal: Custom Reset Confirmation (Replacing native confirm) -->
-        <Transition name="fade">
+        <transition name="fade">
             <div v-if="showResetConfirm"
                 class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
                 <div
@@ -716,23 +717,23 @@
                     </div>
                 </div>
             </div>
-        </Transition>
+        </transition>
 
         <!-- Toast Notification -->
-        <Transition name="fade">
+        <transition name="fade">
             <div v-if="toast.show"
                 class="fixed top-10 left-1/2 transform -translate-x-1/2 z-[100] bg-black/95 text-casino-gold border-2 border-casino-gold/80 px-6 lg:px-8 py-3 lg:py-4 rounded-full shadow-neon-gold font-black text-sm lg:text-base flex items-center gap-2 lg:gap-3 whitespace-nowrap">
                 <i class="fa-solid fa-bell text-yellow-400 animate-swing text-base lg:text-lg"></i>
                 <span>{{ toast.message }}</span>
             </div>
-        </Transition>
+        </transition>
 
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const { createApp, ref, computed, watch, onMounted } = Vue;
 
@@ -849,7 +850,11 @@
                     if (userRole.value !== 'host') return;
                     betAmount.value = Math.floor(Math.abs(betAmount.value)) || 0;
                     if (betAmount.value > currentPot.value) betAmount.value = currentPot.value;
-                    syncState(); // Sync live typing to viewers
+                };
+
+                const onBetInput = () => {
+                    sanitizeBetInput();
+                    if (userRole.value === 'host') syncState(); // 只在手動輸入時才即時同步給觀戰者
                 };
 
                 watch(currentPot, (newVal, oldVal) => {
@@ -859,10 +864,9 @@
                         if (userRole.value === 'host') {
                             if (betAmount.value > newVal) betAmount.value = newVal;
                             if (betAmount.value === 0 && newVal > 0) betAmount.value = Math.min(anteAmount.value, newVal);
-                            syncState();
                         }
                     }
-                });
+                }, { flush: 'sync' }); // 確保金額修正同步執行，避免狀態寫入落後
 
                 const selectedPlayer = computed(() => players.value.find(p => p.id === selectedPlayerId.value) || players.value[0]);
                 const isValidBet = computed(() => betAmount.value > 0 && betAmount.value <= currentPot.value && currentPot.value > 0);
@@ -871,6 +875,7 @@
                 const setBetPreset = (ratio) => {
                     betAmount.value = Math.floor(currentPot.value * ratio);
                     playSound('chip');
+                    if (userRole.value === 'host') syncState();
                 };
 
                 const collectAnte = (isInit = false) => {
@@ -1124,7 +1129,7 @@
                     isSoundEnabled, floatingTexts, isOnline,
                     selectedPlayer, isValidBet, sortedPlayers, settlementTransactions,
                     setBetPreset, collectAnte, splitPot, resetPot, processResult, undoLastAction, addPlayer, removePlayer,
-                    executeResetAllGame, sanitizeBetInput, syncState
+                    executeResetAllGame, sanitizeBetInput, onBetInput, syncState
                 };
             }
         }).mount('#app');

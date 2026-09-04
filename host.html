@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>射龍門籌碼計數機 - 雲端連線版</title>
     <link rel="shortcut icon" href="https://cheungmanwa.github.io/Shooting-Goal-Chip-Counting-Machine/favicon.ico" />
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 -->
@@ -151,6 +152,7 @@
 </head>
 
 <body class="text-slate-100 min-h-screen w-full p-2 sm:p-4 xl:p-6 flex justify-center items-start lg:items-center">
+
     <div id="app"
         class="max-w-[1280px] w-full min-h-[100dvh] lg:min-h-0 lg:h-full lg:max-h-[800px] flex flex-col gap-4 pb-10 lg:pb-0">
 
@@ -173,12 +175,11 @@
                         建立房間 (房主)
                         <span class="text-xs font-normal text-emerald-200">全權控制遊戲與派彩</span>
                     </button>
-                    <button @click="selectRole('viewer')"
-                        class="flex-1 btn-press py-5 bg-slate-800 text-slate-200 rounded-2xl font-black text-lg border border-slate-600 shadow-lg flex flex-col items-center gap-2 hover:bg-slate-700 transition">
+                    <!-- <button @click="selectRole('viewer')" class="flex-1 btn-press py-5 bg-slate-800 text-slate-200 rounded-2xl font-black text-lg border border-slate-600 shadow-lg flex flex-col items-center gap-2 hover:bg-slate-700 transition">
                         <i class="fa-solid fa-eye text-3xl text-slate-400"></i>
                         加入觀戰 (玩家)
                         <span class="text-xs font-normal text-slate-400">僅能觀看即時戰況同步</span>
-                    </button>
+                    </button> -->
                 </div>
             </div>
         </transition>
@@ -338,7 +339,7 @@
                                     <i class="fa-solid fa-coins text-emerald-600 text-lg lg:text-xl"></i>
                                 </div>
                                 <input type="number" v-model.number="betAmount" min="0" :max="currentPot"
-                                    @input="sanitizeBetInput" :readonly="userRole !== 'host'"
+                                    @input="onBetInput" :readonly="userRole !== 'host'"
                                     class="w-full bg-casino-dark/80 border-2 border-emerald-700/80 rounded-xl py-2 lg:py-3 pl-10 lg:pl-12 pr-4 text-white font-black text-xl lg:text-2xl text-right focus:outline-none focus:border-casino-gold transition-colors shadow-inner"
                                     :class="{'opacity-70 pointer-events-none': userRole !== 'host'}">
                             </div>
@@ -854,7 +855,11 @@
                     if (userRole.value !== 'host') return;
                     betAmount.value = Math.floor(Math.abs(betAmount.value)) || 0;
                     if (betAmount.value > currentPot.value) betAmount.value = currentPot.value;
-                    syncState(); // Sync live typing to viewers
+                };
+
+                const onBetInput = () => {
+                    sanitizeBetInput();
+                    if (userRole.value === 'host') syncState(); // 只在手動輸入時才即時同步給觀戰者
                 };
 
                 watch(currentPot, (newVal, oldVal) => {
@@ -864,10 +869,9 @@
                         if (userRole.value === 'host') {
                             if (betAmount.value > newVal) betAmount.value = newVal;
                             if (betAmount.value === 0 && newVal > 0) betAmount.value = Math.min(anteAmount.value, newVal);
-                            syncState();
                         }
                     }
-                });
+                }, { flush: 'sync' }); // 確保金額修正同步執行，避免狀態寫入落後
 
                 const selectedPlayer = computed(() => players.value.find(p => p.id === selectedPlayerId.value) || players.value[0]);
                 const isValidBet = computed(() => betAmount.value > 0 && betAmount.value <= currentPot.value && currentPot.value > 0);
@@ -876,6 +880,7 @@
                 const setBetPreset = (ratio) => {
                     betAmount.value = Math.floor(currentPot.value * ratio);
                     playSound('chip');
+                    if (userRole.value === 'host') syncState();
                 };
 
                 const collectAnte = (isInit = false) => {
@@ -1129,7 +1134,7 @@
                     isSoundEnabled, floatingTexts, isOnline,
                     selectedPlayer, isValidBet, sortedPlayers, settlementTransactions,
                     setBetPreset, collectAnte, splitPot, resetPot, processResult, undoLastAction, addPlayer, removePlayer,
-                    executeResetAllGame, sanitizeBetInput, syncState
+                    executeResetAllGame, sanitizeBetInput, onBetInput, syncState
                 };
             }
         }).mount('#app');
