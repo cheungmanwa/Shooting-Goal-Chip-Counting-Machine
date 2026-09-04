@@ -168,6 +168,12 @@
                     射龍門神器
                 </h1>
                 <div class="flex flex-col md:flex-row gap-4 w-full max-w-lg">
+                    <button @click="selectRole('host')"
+                        class="flex-1 btn-press py-5 bg-gradient-to-r from-emerald-500 to-emerald-700 text-white rounded-2xl font-black text-lg border border-emerald-400/50 shadow-lg flex flex-col items-center gap-2 transition hover:brightness-110">
+                        <i class="fa-solid fa-crown text-3xl text-yellow-300"></i>
+                        建立房間 (房主)
+                        <span class="text-xs font-normal text-emerald-200">全權控制遊戲與派彩</span>
+                    </button>
                     <button @click="selectRole('viewer')"
                         class="flex-1 btn-press py-5 bg-slate-800 text-slate-200 rounded-2xl font-black text-lg border border-slate-600 shadow-lg flex flex-col items-center gap-2 hover:bg-slate-700 transition">
                         <i class="fa-solid fa-eye text-3xl text-slate-400"></i>
